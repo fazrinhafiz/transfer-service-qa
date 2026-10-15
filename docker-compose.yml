@@ -51,3 +51,20 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+
+  # Load generator. Only started on demand (`make perf-*`), never by `up`.
+  # It runs on the compose network, so it reaches the API by service name.
+  k6:
+    image: grafana/k6:2.3.0
+    profiles: ["perf"]
+    working_dir: /perf
+    volumes:
+      - ./perf:/perf
+    environment:
+      BASE_URL: "http://api:8080"
+    # Root so it can write results into the bind mount on Linux CI runners,
+    # where the host directory isn't owned by the image's k6 user.
+    user: root
+    depends_on:
+      api:
+        condition: service_healthy
