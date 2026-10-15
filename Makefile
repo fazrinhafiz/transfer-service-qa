@@ -3,7 +3,7 @@ PYTEST    := .venv/bin/python -m pytest
 ALLURE    := npx --yes allure@3.19.1
 K6        := docker compose run --rm k6 run --summary-trend-stats="avg,med,p(90),p(95),p(99),max"
 
-.PHONY: help up down logs test-unit test-integration coverage-html venv test-api test-bdd test-smoke test-python report perf-smoke perf-load perf-stress perf-spike
+.PHONY: help up down logs test-unit test-integration coverage-html venv test-api test-bdd test-smoke test-python report perf-smoke perf-load perf-stress perf-spike ci
 
 help: ## List targets
 	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  %-18s %s\n", $$1, $$2}'
@@ -60,3 +60,5 @@ perf-stress: ## k6 stress test: step the request rate up until SLOs break (~6 mi
 
 perf-spike: ## k6 spike test: 10 -> 300 VUs and back, checks recovery (~3 min)
 	$(K6) --summary-export=results/spike-summary.json spike.js
+
+ci: test-unit up test-integration test-python perf-smoke ## Run the same stages as the CI pipeline, locally
