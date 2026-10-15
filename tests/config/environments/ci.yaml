@@ -1,0 +1,4 @@
+base_url: http://localhost:8080
+# Shared CI runners are slower and noisier than a laptop.
+timeout_seconds: 15
+startup_timeout_seconds: 180

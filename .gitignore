@@ -1,0 +1,17 @@
+# Go
+service/coverage.*
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Reports
+allure-results/
+allure-report/
+
+# OS / editors
+.DS_Store
+.idea/
+.vscode/

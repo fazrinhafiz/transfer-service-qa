@@ -1,0 +1,4 @@
+base_url: http://localhost:8080
+timeout_seconds: 5
+# How long to wait for /healthz before giving up on the whole run.
+startup_timeout_seconds: 60
