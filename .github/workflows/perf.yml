@@ -1,0 +1,60 @@
+name: Performance
+
+# Full performance tests take several minutes each and load the runner
+# heavily, so they run only on demand: Actions tab -> Performance -> Run workflow.
+on:
+  workflow_dispatch:
+    inputs:
+      test:
+        description: Which test to run
+        type: choice
+        options: [all, load, stress, spike]
+        default: all
+
+permissions:
+  contents: read
+
+jobs:
+  k6:
+    name: k6 ${{ matrix.test }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      # Each test gets its own runner and its own fresh stack, so results
+      # aren't skewed by data or load left behind by another test.
+      matrix:
+        test: ${{ fromJSON(inputs.test == 'all' && '["load","stress","spike"]' || format('["{0}"]', inputs.test)) }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Start stack
+        run: docker compose up -d --build --wait
+
+      - name: Run k6 ${{ matrix.test }} test
+        # The stress test is *meant* to breach its thresholds: its output is
+        # the step at which that happens. Don't mark the run red for it.
+        continue-on-error: ${{ matrix.test == 'stress' }}
+        run: |
+          docker compose run --rm k6 run \
+            --summary-trend-stats="avg,med,p(90),p(95),p(99),max" \
+            --summary-export=results/${{ matrix.test }}-summary.json \
+            ${{ matrix.test }}.js
+
+      - name: Summary
+        if: ${{ !cancelled() }}
+        run: python3 .github/scripts/k6_summary.py perf/results/${{ matrix.test }}-summary.json "k6 ${{ matrix.test }} test" >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/upload-artifact@v7
+        if: ${{ !cancelled() }}
+        with:
+          name: k6-${{ matrix.test }}
+          path: perf/results/${{ matrix.test }}-summary.json
+
+      - name: Service logs
+        if: ${{ failure() }}
+        run: docker compose logs --no-color api
+
+      - name: Stop stack
+        if: ${{ always() }}
+        run: docker compose down -v
